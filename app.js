@@ -639,4 +639,371 @@
   // ── Initial focus ───────────────────────────────────────
   searchInput.focus();
 
+  // ══════════════════════════════════════════════════════════
+  // ── COMPARE MODE ──────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════
+
+  const compareSection = $('#compare-section');
+  const compareDashboard = $('#compare-dashboard');
+  const compareInputA = $('#compare-input-a');
+  const compareInputB = $('#compare-input-b');
+  const compareDropdownA = $('#compare-dropdown-a');
+  const compareDropdownB = $('#compare-dropdown-b');
+  const compareBtn = $('#compare-btn');
+  const navBtns = $$('.topbar-nav-btn');
+
+  let compareArtistA = null;
+  let compareArtistB = null;
+  let compareCharts = [];
+
+  // ── Mode Switching ──────────────────────────────────────
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const mode = this.dataset.mode;
+      navBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+
+      if (mode === 'explore') {
+        compareSection.classList.remove('active');
+        hero.style.display = '';
+        if (currentArtist) {
+          dashboard.style.display = '';
+        }
+        destroyCompareCharts();
+      } else {
+        hero.style.display = 'none';
+        dashboard.style.display = 'none';
+        dashboard.classList.remove('active');
+        compareSection.classList.add('active');
+      }
+    });
+  });
+
+  // ── Compare Search Logic ────────────────────────────────
+  function setupCompareSearch(input, dropdown, side) {
+    input.addEventListener('input', function() {
+      const q = this.value.trim();
+      if (q.length === 0) {
+        dropdown.classList.remove('active');
+        if (side === 'a') compareArtistA = null;
+        else compareArtistB = null;
+        input.classList.remove('selected');
+        updateCompareBtn();
+        return;
+      }
+      const results = searchArtists(q);
+      if (results.length === 0) { dropdown.classList.remove('active'); return; }
+      renderCompareDropdown(dropdown, results, input, side);
+      dropdown.classList.add('active');
+    });
+
+    input.addEventListener('focus', function() {
+      if (this.value.trim().length > 0) {
+        const results = searchArtists(this.value.trim());
+        if (results.length > 0) {
+          renderCompareDropdown(dropdown, results, input, side);
+          dropdown.classList.add('active');
+        }
+      }
+    });
+  }
+
+  function renderCompareDropdown(dropdown, artists, input, side) {
+    dropdown.innerHTML = artists.map(a => `
+      <div class="compare-dropdown-item" data-slug="${a.slug}">
+        <span class="cdi-name">${a.flag} ${a.name}</span>
+        <span class="cdi-score ${getScoreClass(a.marketScore)}">${a.marketScore}</span>
+      </div>
+    `).join('');
+
+    $$('.compare-dropdown-item', dropdown).forEach(item => {
+      item.addEventListener('click', () => {
+        const artist = getArtistBySlug(item.dataset.slug);
+        if (!artist) return;
+        input.value = artist.name;
+        input.classList.add('selected');
+        dropdown.classList.remove('active');
+        if (side === 'a') compareArtistA = artist;
+        else compareArtistB = artist;
+        updateCompareBtn();
+      });
+    });
+  }
+
+  function updateCompareBtn() {
+    compareBtn.disabled = !(compareArtistA && compareArtistB);
+  }
+
+  setupCompareSearch(compareInputA, compareDropdownA, 'a');
+  setupCompareSearch(compareInputB, compareDropdownB, 'b');
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.compare-search-wrapper')) {
+      compareDropdownA.classList.remove('active');
+      compareDropdownB.classList.remove('active');
+    }
+  });
+
+  // ── Compare Button Click ────────────────────────────────
+  compareBtn.addEventListener('click', function() {
+    if (!compareArtistA || !compareArtistB) return;
+    renderComparison(compareArtistA, compareArtistB);
+  });
+
+  // ── Suggestion Links ────────────────────────────────────
+  $$('.compare-suggestion-link').forEach(link => {
+    link.addEventListener('click', function() {
+      const a = getArtistBySlug(this.dataset.a);
+      const b = getArtistBySlug(this.dataset.b);
+      if (a && b) {
+        compareArtistA = a;
+        compareArtistB = b;
+        compareInputA.value = a.name;
+        compareInputB.value = b.name;
+        compareInputA.classList.add('selected');
+        compareInputB.classList.add('selected');
+        updateCompareBtn();
+        renderComparison(a, b);
+      }
+    });
+  });
+
+  // ── Destroy Compare Charts ──────────────────────────────
+  function destroyCompareCharts() {
+    compareCharts.forEach(c => c.destroy());
+    compareCharts = [];
+  }
+
+  // ── Render Comparison Dashboard ─────────────────────────
+  function renderComparison(a, b) {
+    destroyCompareCharts();
+
+    // Build unified year range
+    const allYearsA = a.priceHistory.map(p => p.year);
+    const allYearsB = b.priceHistory.map(p => p.year);
+    const minYear = Math.min(allYearsA[0], allYearsB[0]);
+    const maxYear = Math.max(allYearsA[allYearsA.length - 1], allYearsB[allYearsB.length - 1]);
+    const years = [];
+    for (let y = minYear; y <= maxYear; y++) years.push(y);
+
+    const mapByYear = (hist) => {
+      const m = {};
+      hist.forEach(p => m[p.year] = p);
+      return m;
+    };
+    const mapA = mapByYear(a.priceHistory);
+    const mapB = mapByYear(b.priceHistory);
+
+    const dataA = years.map(y => mapA[y] ? mapA[y].avg : null);
+    const dataB = years.map(y => mapB[y] ? mapB[y].avg : null);
+
+    // Normalized data
+    const firstA = a.priceHistory[0].avg;
+    const firstB = b.priceHistory[0].avg;
+    const normA = years.map(y => mapA[y] ? (mapA[y].avg / firstA) * 100 : null);
+    const normB = years.map(y => mapB[y] ? (mapB[y].avg / firstB) * 100 : null);
+
+    // KPI faceoff data
+    const kpis = [
+      { label: 'Market Score', valA: a.marketScore, valB: b.marketScore, fmtA: a.marketScore + '/100', fmtB: b.marketScore + '/100', higher: true },
+      { label: 'Total Lots', valA: a.kpis.totalLots, valB: b.kpis.totalLots, fmtA: formatNumber(a.kpis.totalLots), fmtB: formatNumber(b.kpis.totalLots), higher: true },
+      { label: 'Sell-Through', valA: a.kpis.sellThroughRate, valB: b.kpis.sellThroughRate, fmtA: a.kpis.sellThroughRate + '%', fmtB: b.kpis.sellThroughRate + '%', higher: true },
+      { label: 'Avg Price', valA: a.kpis.avgHammerPrice, valB: b.kpis.avgHammerPrice, fmtA: formatCurrency(a.kpis.avgHammerPrice), fmtB: formatCurrency(b.kpis.avgHammerPrice), higher: true },
+      { label: 'All-Time High', valA: a.kpis.allTimeHigh.price, valB: b.kpis.allTimeHigh.price, fmtA: formatCurrency(a.kpis.allTimeHigh.price), fmtB: formatCurrency(b.kpis.allTimeHigh.price), higher: true },
+      { label: '12M Volume', valA: a.kpis.marketVolume12m, valB: b.kpis.marketVolume12m, fmtA: formatCurrency(a.kpis.marketVolume12m), fmtB: formatCurrency(b.kpis.marketVolume12m), higher: true },
+      { label: '12M Trend', valA: a.trend12m, valB: b.trend12m, fmtA: (a.trend12m >= 0 ? '+' : '') + a.trend12m + '%', fmtB: (b.trend12m >= 0 ? '+' : '') + b.trend12m + '%', higher: true }
+    ];
+
+    compareDashboard.innerHTML = `
+      <!-- PRICE HISTORY OVERLAY -->
+      <div class="compare-chart-card">
+        <div class="section-title"><span class="section-title-icon">📈</span> Market Maturation Comparison</div>
+        <div class="compare-chart-container">
+          <canvas id="compare-price-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- NORMALIZED CHART -->
+      <div class="compare-chart-card">
+        <div class="section-title"><span class="section-title-icon">📊</span> Relative Growth Index (Base = 100)</div>
+        <div class="compare-chart-container">
+          <canvas id="compare-norm-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- KPI FACEOFF -->
+      <div class="compare-chart-card">
+        <div class="section-title"><span class="section-title-icon">⚡</span> KPI Face-Off</div>
+        <table class="kpi-faceoff">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th class="artist-a-head">${a.flag} ${a.name}</th>
+              <th class="vs-head">vs</th>
+              <th class="artist-b-head">${b.flag} ${b.name}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${kpis.map(k => {
+              const aWins = k.higher ? k.valA > k.valB : k.valA < k.valB;
+              const tie = k.valA === k.valB;
+              const arrowA = tie ? '—' : (aWins ? '◄' : '');
+              const arrowB = tie ? '' : (aWins ? '' : '◄');
+              return `<tr>
+                <td class="metric-label">${k.label}</td>
+                <td class="val-a ${aWins && !tie ? 'winner' : 'loser'}">${k.fmtA}</td>
+                <td class="vs-col"><span class="arrow-win">${aWins && !tie ? '◄' : (!tie ? '►' : '—')}</span></td>
+                <td class="val-b ${!aWins && !tie ? 'winner' : 'loser'}">${k.fmtB}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- AUCTION HOUSE COMPARISON -->
+      <div class="compare-chart-card">
+        <div class="section-title"><span class="section-title-icon">🏛️</span> Auction House Comparison</div>
+        <div class="compare-dist-row">
+          <div class="compare-dist-col compare-dist-col-a">
+            <h3>${a.flag} ${a.name}</h3>
+            <div id="compare-auction-a"></div>
+          </div>
+          <div class="compare-dist-col compare-dist-col-b">
+            <h3>${b.flag} ${b.name}</h3>
+            <div id="compare-auction-b"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GEOGRAPHIC COMPARISON -->
+      <div class="compare-chart-card">
+        <div class="section-title"><span class="section-title-icon">🌍</span> Geographic Comparison</div>
+        <div class="compare-dist-row">
+          <div class="compare-dist-col compare-dist-col-a">
+            <h3>${a.flag} ${a.name}</h3>
+            <div id="compare-geo-a"></div>
+          </div>
+          <div class="compare-dist-col compare-dist-col-b">
+            <h3>${b.flag} ${b.name}</h3>
+            <div id="compare-geo-b"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Render charts
+    requestAnimationFrame(() => {
+      renderCompareLineChart('compare-price-chart', years, dataA, dataB, a.name, b.name, false);
+      renderCompareLineChart('compare-norm-chart', years, normA, normB, a.name, b.name, true);
+      renderHBarDistribution('#compare-auction-a', a.auctionHouseDistribution, 'house');
+      renderHBarDistribution('#compare-auction-b', b.auctionHouseDistribution, 'house');
+      renderHBarDistribution('#compare-geo-a', a.geographicDistribution, 'city');
+      renderHBarDistribution('#compare-geo-b', b.geographicDistribution, 'city');
+    });
+
+    compareDashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── Compare Line Chart ──────────────────────────────────
+  function renderCompareLineChart(canvasId, labels, dataA, dataB, nameA, nameB, isNormalized) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: nameA,
+            data: dataA,
+            borderColor: '#58a6ff',
+            backgroundColor: 'rgba(88, 166, 255, 0.08)',
+            borderWidth: 2.5,
+            fill: false,
+            tension: 0.3,
+            pointRadius: 2,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#58a6ff',
+            pointBorderColor: '#0d1117',
+            pointBorderWidth: 2,
+            spanGaps: false,
+          },
+          {
+            label: nameB,
+            data: dataB,
+            borderColor: '#e3b341',
+            backgroundColor: 'rgba(227, 179, 65, 0.08)',
+            borderWidth: 2.5,
+            fill: false,
+            tension: 0.3,
+            pointRadius: 2,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#e3b341',
+            pointBorderColor: '#0d1117',
+            pointBorderWidth: 2,
+            spanGaps: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              color: '#8b949e',
+              font: { family: 'Inter', size: 12, weight: 600 },
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 20,
+              boxWidth: 10,
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(22, 27, 34, 0.95)',
+            titleColor: '#f0f6fc',
+            bodyColor: '#8b949e',
+            borderColor: 'rgba(240, 246, 252, 0.1)',
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: 12,
+            titleFont: { family: 'Inter', weight: 700 },
+            bodyFont: { family: 'Inter', weight: 500 },
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.raw == null) return null;
+                if (isNormalized) return ctx.dataset.label + ': ' + ctx.raw.toFixed(0);
+                return ctx.dataset.label + ': ' + formatCurrency(ctx.raw, true);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(240, 246, 252, 0.04)', drawBorder: false },
+            ticks: { color: '#6e7681', font: { family: 'Inter', size: 11 }, maxTicksLimit: 20 }
+          },
+          y: {
+            grid: { color: 'rgba(240, 246, 252, 0.04)', drawBorder: false },
+            ticks: {
+              color: '#6e7681',
+              font: { family: 'Inter', size: 11 },
+              callback: function(value) {
+                if (isNormalized) return value.toFixed(0);
+                return formatCurrency(value, true);
+              }
+            },
+            beginAtZero: false,
+          }
+        }
+      }
+    });
+    compareCharts.push(chart);
+  }
+
 })();

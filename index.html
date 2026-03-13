@@ -14,6 +14,10 @@
     <div class="topbar-brand">
       <span class="topbar-logo">ArtScore</span>
       <span class="topbar-beta">BETA</span>
+      <div class="topbar-nav">
+        <button class="topbar-nav-btn active" data-mode="explore">Explore</button>
+        <button class="topbar-nav-btn" data-mode="compare">Compare</button>
+      </div>
     </div>
     <div class="topbar-right">
       <div class="topbar-stat">
@@ -57,6 +61,34 @@
 
   <!-- DASHBOARD -->
   <main class="dashboard" id="dashboard"></main>
+
+  <!-- COMPARE MODE -->
+  <section class="compare-section" id="compare-section">
+    <div class="compare-search-panel">
+      <h2 class="compare-headline">Compare Artists</h2>
+      <p class="compare-sub">Overlay price histories, compare KPIs, and analyze market dynamics side by side.</p>
+      <div class="compare-inputs">
+        <div class="compare-input-group">
+          <label class="compare-label">Artist A</label>
+          <div class="compare-search-wrapper">
+            <input type="text" id="compare-input-a" class="compare-search-input" placeholder="Search artist..." autocomplete="off" spellcheck="false">
+            <div class="compare-dropdown" id="compare-dropdown-a"></div>
+          </div>
+        </div>
+        <div class="compare-vs">VS</div>
+        <div class="compare-input-group">
+          <label class="compare-label">Artist B</label>
+          <div class="compare-search-wrapper">
+            <input type="text" id="compare-input-b" class="compare-search-input" placeholder="Search artist..." autocomplete="off" spellcheck="false">
+            <div class="compare-dropdown" id="compare-dropdown-b"></div>
+          </div>
+        </div>
+      </div>
+      <button class="compare-btn" id="compare-btn" disabled>COMPARE</button>
+      <div class="compare-suggestion">Try: <span class="compare-suggestion-link" data-a="jean-michel-basquiat" data-b="gerhard-richter">Basquiat vs Richter</span> · <span class="compare-suggestion-link" data-a="banksy" data-b="kaws">Banksy vs KAWS</span> · <span class="compare-suggestion-link" data-a="yayoi-kusama" data-b="cecily-brown">Kusama vs Cecily Brown</span></div>
+    </div>
+    <div class="compare-dashboard" id="compare-dashboard"></div>
+  </section>
 
   <!-- FOOTER -->
   <footer class="footer">
