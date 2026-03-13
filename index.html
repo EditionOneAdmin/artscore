@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArtScore — Art Market Intelligence</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="topbar-brand">
+      <span class="topbar-logo">ArtScore</span>
+      <span class="topbar-beta">BETA</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-stat">
+        <span class="dot"></span>
+        <span>10 Artists Indexed</span>
+      </div>
+      <span class="topbar-tagline">Art Market Intelligence</span>
+    </div>
+  </nav>
+
+  <!-- HERO / SEARCH -->
+  <section class="hero" id="hero">
+    <h1 class="hero-title">Art Market Intelligence</h1>
+    <p class="hero-subtitle">Real-time auction analytics, price history & market insights for contemporary artists</p>
+
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <span class="search-icon">⌕</span>
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder="Search any artist..."
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <span class="search-kbd">/</span>
+      </div>
+      <div class="search-dropdown" id="search-dropdown"></div>
+    </div>
+
+    <div class="hero-suggestions">
+      Try:
+      <span class="suggestion-link" data-slug="gerhard-richter">Gerhard Richter</span> ·
+      <span class="suggestion-link" data-slug="banksy">Banksy</span> ·
+      <span class="suggestion-link" data-slug="kaws">KAWS</span> ·
+      <span class="suggestion-link" data-slug="yayoi-kusama">Yayoi Kusama</span> ·
+      <span class="suggestion-link" data-slug="jean-michel-basquiat">Basquiat</span>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <main class="dashboard" id="dashboard"></main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-text">Data sources: Auction records 1985–2026 · Powered by <strong>ArtScore</strong></div>
+    <div class="footer-disclaimer">Demo prototype — mock data for demonstration purposes. Not financial advice.</div>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
