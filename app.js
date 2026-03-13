@@ -768,6 +768,22 @@
     });
   });
 
+  // ── Hero Compare Button ─────────────────────────────────
+  const heroCompareBtn = document.getElementById('hero-compare-btn');
+  if (heroCompareBtn) {
+    heroCompareBtn.addEventListener('click', function() {
+      // Switch to compare mode
+      navBtns.forEach(b => b.classList.remove('active'));
+      document.querySelector('.topbar-nav-btn[data-mode="compare"]').classList.add('active');
+      hero.style.display = 'none';
+      dashboard.style.display = 'none';
+      dashboard.classList.remove('active');
+      compareSection.classList.add('active');
+      // Focus first input
+      setTimeout(() => compareInputA.focus(), 300);
+    });
+  }
+
   // ── Destroy Compare Charts ──────────────────────────────
   function destroyCompareCharts() {
     compareCharts.forEach(c => c.destroy());
